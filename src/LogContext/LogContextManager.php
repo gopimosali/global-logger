@@ -31,19 +31,13 @@ class LogContextManager
     protected ?string $requestId = null;
 
     /**
-     * Package configuration array
-     */
-    protected array $config;
-
-    /**
      * Create a new LogContextManager instance
      *
      * @param  array  $config  Package configuration from config/globallogger.php
      */
-    public function __construct(array $config = [])
-    {
-        $this->config = $config;
-    }
+    public function __construct(
+        protected array $config = []
+    ) {}
 
     /**
      * Get or generate the request ID

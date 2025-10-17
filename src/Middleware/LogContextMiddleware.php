@@ -9,12 +9,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class LogContextMiddleware
 {
-    protected GlobalLogger $logger;
-
-    public function __construct(GlobalLogger $logger)
-    {
-        $this->logger = $logger;
-    }
+    public function __construct(
+        protected GlobalLogger $logger
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {

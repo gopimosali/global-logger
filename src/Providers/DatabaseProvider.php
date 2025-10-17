@@ -7,12 +7,9 @@ use Illuminate\Support\Facades\DB;
 
 class DatabaseProvider implements LogProviderInterface
 {
-    protected array $config;
-
-    public function __construct(array $config)
-    {
-        $this->config = $config;
-    }
+    public function __construct(
+        protected array $config
+    ) {}
 
     public function log(string $level, string $message, array $context): void
     {

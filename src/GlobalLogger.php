@@ -26,11 +26,6 @@ class GlobalLogger implements LoggerInterface
     protected array $providers = [];
 
     /**
-     * Log context manager handles request_id generation and context enrichment
-     */
-    protected LogContextManager $contextManager;
-
-    /**
      * Active traces being tracked for performance measurement
      *
      * @var array<string, array{id: string, name: string, request_id: string, start_time: float, metadata: array}>
@@ -42,10 +37,9 @@ class GlobalLogger implements LoggerInterface
      *
      * @param  LogContextManager  $contextManager  Context manager for request_id and enrichment
      */
-    public function __construct(LogContextManager $contextManager)
-    {
-        $this->contextManager = $contextManager;
-    }
+    public function __construct(
+        protected LogContextManager $contextManager
+    ) {}
 
     /**
      * Add a log provider to send logs to

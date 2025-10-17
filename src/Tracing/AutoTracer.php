@@ -14,17 +14,12 @@ use Illuminate\Support\Facades\Event;
 
 class AutoTracer
 {
-    protected GlobalLogger $logger;
-
-    protected array $config;
-
     protected array $activeTraces = [];
 
-    public function __construct(GlobalLogger $logger, array $config = [])
-    {
-        $this->logger = $logger;
-        $this->config = $config;
-    }
+    public function __construct(
+        protected GlobalLogger $logger,
+        protected array $config = []
+    ) {}
 
     public function register(): void
     {
