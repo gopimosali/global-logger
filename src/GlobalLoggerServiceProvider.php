@@ -37,10 +37,8 @@ class GlobalLoggerServiceProvider extends ServiceProvider
             return $logger;
         });
 
-        // Override Laravel's Log facade to use GlobalLogger
-        $this->app->extend('log', function ($service, $app) {
-            return $app->make(GlobalLogger::class);
-        });
+        // Bind GlobalLogger to 'log' for facade access
+        $this->app->alias(GlobalLogger::class, 'log');
 
         // Register AutoTracer if enabled
         if (config('globallogger.auto_tracing.enabled', true)) {
