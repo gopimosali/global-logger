@@ -1,0 +1,121 @@
+name: Bug Report
+description: Report a bug or issue with GlobalLogger
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the form below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: When I try to log with AWS provider, I get...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps To Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Configure AWS provider with...
+        2. Call Log::info()...
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Logs should be sent to CloudWatch...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Got exception...
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code Sample
+      description: If applicable, add code to help explain your problem
+      render: php
+      placeholder: |
+        Log::info('Test message', ['key' => 'value']);
+
+  - type: input
+    id: package-version
+    attributes:
+      label: GlobalLogger Version
+      description: What version of GlobalLogger are you using?
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: laravel-version
+    attributes:
+      label: Laravel Version
+      description: What version of Laravel are you using?
+      placeholder: "10.48.0"
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP Version
+      description: What version of PHP are you using?
+      placeholder: "8.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: providers
+    attributes:
+      label: Which provider(s) are affected?
+      multiple: true
+      options:
+        - Custom (File)
+        - AWS CloudWatch
+        - AWS X-Ray
+        - Datadog
+        - Oracle Cloud
+        - Database
+        - Not sure
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      description: Please copy and paste any relevant error logs
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission Checks
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have provided all required information above
+          required: true

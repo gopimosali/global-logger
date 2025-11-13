@@ -1,5 +1,12 @@
 # GlobalLogger for Laravel
 
+[![Tests](https://github.com/gopimosali/global-logger/workflows/Tests/badge.svg)](https://github.com/gopimosali/global-logger/actions)
+[![Code Quality](https://github.com/gopimosali/global-logger/workflows/Code%20Quality/badge.svg)](https://github.com/gopimosali/global-logger/actions)
+[![Latest Stable Version](https://poser.pugx.org/gopimosali/global-logger/v/stable)](https://packagist.org/packages/gopimosali/global-logger)
+[![Total Downloads](https://poser.pugx.org/gopimosali/global-logger/downloads)](https://packagist.org/packages/gopimosali/global-logger)
+[![License](https://poser.pugx.org/gopimosali/global-logger/license)](https://packagist.org/packages/gopimosali/global-logger)
+[![PHP Version](https://img.shields.io/packagist/php-v/gopimosali/global-logger)](https://packagist.org/packages/gopimosali/global-logger)
+
 A powerful, production-ready Laravel logging package that provides **universal request tracking** and **multi-provider support** with automatic correlation across AWS CloudWatch/X-Ray, Datadog, Oracle Cloud, Database, and file-based logs.
 
 ## 🎯 Key Features

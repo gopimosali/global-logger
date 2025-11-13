@@ -4,4 +4,11 @@
 /node_modules/
 .DS_Store
 .phpunit.result.cache
+.phpunit.cache
+.php-cs-fixer.cache
+.phpstan
+coverage-html/
 composer.lock
+*.log
+.env
+.env.testing

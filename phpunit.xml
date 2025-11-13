@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true"
+         beStrictAboutOutputDuringTests="true"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="random"
+         beStrictAboutCoverageMetadata="true">
+    <testsuites>
+        <testsuite name="GlobalLogger Test Suite">
+            <directory>tests</directory>
+        </testsuite>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+        <exclude>
+            <directory>src/Facades</directory>
+        </exclude>
+    </source>
+    <coverage>
+        <report>
+            <html outputDirectory="coverage-html"/>
+            <text outputFile="php://stdout" showUncoveredFiles="true"/>
+        </report>
+    </coverage>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:VGVzdEtleUZvclBhY2thZ2VUZXN0aW5nMTIzNDU2Nzg="/>
+        <env name="CACHE_DRIVER" value="array"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+        <env name="GLOBALLOG_CUSTOM_ENABLED" value="true"/>
+        <env name="GLOBALLOG_AWS_ENABLED" value="false"/>
+        <env name="GLOBALLOG_DATADOG_ENABLED" value="false"/>
+        <env name="GLOBALLOG_ORACLE_ENABLED" value="false"/>
+        <env name="GLOBALLOG_DATABASE_ENABLED" value="false"/>
+        <env name="GLOBALLOG_AUTO_TRACING_ENABLED" value="false"/>
+    </php>
+</phpunit>

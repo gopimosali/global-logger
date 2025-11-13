@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/gopimosali/global-logger/discussions
+    about: Ask questions or discuss ideas with the community
+  - name: Documentation
+    url: https://github.com/gopimosali/global-logger#readme
+    about: Read the documentation for usage help
+  - name: Security Vulnerability
+    url: https://github.com/gopimosali/global-logger/security/policy
+    about: Report security vulnerabilities privately
