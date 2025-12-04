@@ -146,7 +146,7 @@ class LogContextManager
      */
     public function toXRayTraceId(?string $requestId = null): string
     {
-        $requestId = $requestId ?? $this->getRequestId();
+        $requestId ??= $this->getRequestId();
 
         // Extract UUID bytes
         $uuid = str_replace('-', '', $requestId);
@@ -167,6 +167,8 @@ class LogContextManager
      * This method converts a standard UUID to Datadog format while
      * preserving the original UUID in span tags.
      *
+     * Uses GMP extension for proper 64-bit integer handling to avoid overflow.
+     *
      * Example:
      * UUID: 550e8400-e29b-41d4-a716-446655440000
      * Datadog: 6145998120563704832
@@ -176,12 +178,18 @@ class LogContextManager
      */
     public function toDatadogTraceId(?string $requestId = null): string
     {
-        $requestId = $requestId ?? $this->getRequestId();
+        $requestId ??= $this->getRequestId();
 
         // Convert UUID to numeric ID (use first 16 hex chars = 64 bits)
         $uuid = str_replace('-', '', $requestId);
         $traceId = substr($uuid, 0, 16);
 
+        // Use GMP for proper large integer handling (avoids overflow)
+        if (function_exists('gmp_strval') && function_exists('gmp_init')) {
+            return gmp_strval(gmp_init($traceId, 16), 10);
+        }
+
+        // Fallback for systems without GMP (may overflow on large values)
         return (string) hexdec($traceId);
     }
 

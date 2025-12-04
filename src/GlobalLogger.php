@@ -4,6 +4,8 @@ namespace Gopimosali\GlobalLogger;
 
 use Gopimosali\GlobalLogger\Contracts\LogProviderInterface;
 use Gopimosali\GlobalLogger\LogContext\LogContextManager;
+use Gopimosali\GlobalLogger\Utils\CircuitBreaker;
+use Gopimosali\GlobalLogger\Utils\PrivacyHelper;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
@@ -15,15 +17,42 @@ use Psr\Log\LogLevel;
  * - Multi-provider support (AWS, Datadog, Oracle, Database, Files)
  * - Optional performance tracing with startTrace()/endTrace()
  * - Zero code changes required (drop-in replacement for Laravel's Log)
+ * - PII redaction for GDPR compliance
+ * - Log sampling for high-traffic apps
+ * - Circuit breaker for failing providers
+ * - Provider-level log filtering
  */
 class GlobalLogger implements LoggerInterface
 {
     /**
-     * Array of registered log providers
+     * Array of registered log providers with their names
      *
-     * @var array<LogProviderInterface>
+     * @var array<string, LogProviderInterface>
      */
     protected array $providers = [];
+
+    /**
+     * Circuit breakers for each provider
+     *
+     * @var array<string, CircuitBreaker>
+     */
+    protected array $circuitBreakers = [];
+
+    /**
+     * PSR-3 log level priority mapping
+     *
+     * @var array<string, int>
+     */
+    protected array $logLevels = [
+        LogLevel::DEBUG => 0,
+        LogLevel::INFO => 1,
+        LogLevel::NOTICE => 2,
+        LogLevel::WARNING => 3,
+        LogLevel::ERROR => 4,
+        LogLevel::CRITICAL => 5,
+        LogLevel::ALERT => 6,
+        LogLevel::EMERGENCY => 7,
+    ];
 
     /**
      * Active traces being tracked for performance measurement
@@ -42,15 +71,46 @@ class GlobalLogger implements LoggerInterface
     ) {}
 
     /**
+ * Register a custom driver creator Closure.
+ * This makes GlobalLogger compatible with Laravel's Log facade
+ *
+ * @param  string  $driver
+ * @param  \Closure  $callback
+ * @return $this
+ */
+public function extend(string $driver, \Closure $callback): static
+{
+    // GlobalLogger doesn't use Laravel's driver system
+    // This method exists for compatibility only
+    return $this;
+}
+
+/**
+ * Get a log channel instance (Laravel Log compatibility)
+ *
+ * @param  string|null  $channel
+ * @return $this
+ */
+public function channel(?string $channel = null): static
+{
+    // GlobalLogger doesn't use channels like Laravel Log
+    // This method exists for compatibility only
+    // All logs go through the registered providers
+    return $this;
+}
+
+    /**
      * Add a log provider to send logs to
      *
      * Providers are called in parallel when logging. If one fails, others continue.
      *
+     * @param  string  $name  Provider name (aws, datadog, database, etc.)
      * @param  LogProviderInterface  $provider  The provider to add (AWS, Datadog, Oracle, etc.)
      */
-    public function addProvider(LogProviderInterface $provider): void
+    public function addProvider(string $name, LogProviderInterface $provider): void
     {
-        $this->providers[] = $provider;
+        $this->providers[$name] = $provider;
+        $this->circuitBreakers[$name] = new CircuitBreaker("provider_{$name}");
     }
 
     /**
@@ -219,17 +279,158 @@ class GlobalLogger implements LoggerInterface
      */
     public function log($level, string|\Stringable $message, array $context = []): void
     {
+        // Apply sampling if enabled
+        if ($this->shouldSample($level)) {
+            return;
+        }
+
+        // Get enriched context with request_id and automatic context
         $enrichedContext = $this->contextManager->getContext();
         $enrichedContext = array_merge($enrichedContext, $context);
 
-        foreach ($this->providers as $provider) {
-            try {
-                $provider->log($level, (string) $message, $enrichedContext);
-            } catch (\Throwable $e) {
-                // Silently fail individual providers to prevent cascading failures
-                error_log('GlobalLogger provider failed: '.$e->getMessage());
+        // Apply PII redaction
+        $enrichedContext = PrivacyHelper::redactContext($enrichedContext);
+
+        // Send to all providers
+        foreach ($this->providers as $name => $provider) {
+            $this->logToProvider($name, $provider, $level, (string) $message, $enrichedContext);
+        }
+    }
+
+    /**
+     * Send log to a specific provider with circuit breaker and level filtering
+     */
+    protected function logToProvider(string $name, LogProviderInterface $provider, string $level, string $message, array $context): void
+    {
+        // Check provider-level log filtering
+        if (! $this->shouldLogToProvider($name, $level)) {
+            return;
+        }
+
+        // Check circuit breaker
+        $circuitBreaker = $this->circuitBreakers[$name] ?? null;
+        if ($circuitBreaker && ! $circuitBreaker->canProceed()) {
+            return;
+        }
+
+        try {
+            $provider->log($level, $message, $context);
+
+            // Record success for circuit breaker
+            if ($circuitBreaker) {
+                $circuitBreaker->recordSuccess();
+            }
+        } catch (\Throwable $e) {
+            // Record failure for circuit breaker
+            if ($circuitBreaker) {
+                $circuitBreaker->recordFailure();
+            }
+
+            // Log error without causing infinite loop
+            error_log("GlobalLogger provider '{$name}' failed: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Check if log should be sampled (skipped)
+     */
+    protected function shouldSample(string $level): bool
+    {
+        if (! config('globallogger.performance.sampling.enabled', false)) {
+            return false;
+        }
+
+        // Never sample errors if configured
+        if (config('globallogger.performance.sampling.exclude_errors', true)) {
+            if (in_array($level, [LogLevel::ERROR, LogLevel::CRITICAL, LogLevel::ALERT, LogLevel::EMERGENCY])) {
+                return false;
             }
         }
+
+        // Only sample configured levels
+        $sampleLevels = config('globallogger.performance.sampling.levels', ['debug', 'info']);
+        if (! in_array($level, $sampleLevels)) {
+            return false;
+        }
+
+        // Apply sampling rate
+        $rate = config('globallogger.performance.sampling.rate', 0.1);
+
+        return mt_rand() / mt_getrandmax() > $rate;
+    }
+
+    /**
+     * Check if log should be sent to specific provider based on level filtering
+     */
+    protected function shouldLogToProvider(string $name, string $level): bool
+    {
+        $minLevel = config("globallogger.provider_levels.{$name}", 'debug');
+
+        $currentPriority = $this->logLevels[$level] ?? 0;
+        $minPriority = $this->logLevels[$minLevel] ?? 0;
+
+        return $currentPriority >= $minPriority;
+    }
+
+    /**
+     * Log a metric (structured logging)
+     *
+     * @param  string  $name  Metric name
+     * @param  float|int  $value  Metric value
+     * @param  array<string, mixed>  $tags  Additional tags
+     */
+    public function metric(string $name, float|int $value, array $tags = []): void
+    {
+        $this->info("Metric: {$name}", [
+            'log_type' => 'metric',
+            'metric_name' => $name,
+            'metric_value' => $value,
+            'tags' => $tags,
+        ]);
+    }
+
+    /**
+     * Log an audit event (structured logging)
+     *
+     * @param  string  $action  Action performed
+     * @param  array<string, mixed>  $data  Audit data
+     */
+    public function audit(string $action, array $data = []): void
+    {
+        $this->info("Audit: {$action}", array_merge([
+            'log_type' => 'audit',
+            'action' => $action,
+        ], $data));
+    }
+
+    /**
+     * Log a security event (structured logging)
+     *
+     * @param  string  $event  Security event type
+     * @param  array<string, mixed>  $data  Event data
+     */
+    public function security(string $event, array $data = []): void
+    {
+        $this->warning("Security: {$event}", array_merge([
+            'log_type' => 'security',
+            'event' => $event,
+        ], $data));
+    }
+
+    /**
+     * Log a performance metric
+     *
+     * @param  string  $operation  Operation name
+     * @param  float  $durationMs  Duration in milliseconds
+     * @param  array<string, mixed>  $metadata  Additional metadata
+     */
+    public function performance(string $operation, float $durationMs, array $metadata = []): void
+    {
+        $this->info("Performance: {$operation}", array_merge([
+            'log_type' => 'performance',
+            'operation' => $operation,
+            'duration_ms' => $durationMs,
+        ], $metadata));
     }
 
     /**

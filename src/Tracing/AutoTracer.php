@@ -72,6 +72,11 @@ class AutoTracer
     protected function registerDatabaseTracing(): void
     {
         Event::listen(QueryExecuted::class, function (QueryExecuted $event) {
+            // Prevent infinite loops - exclude queries to logging/monitoring tables
+            if ($this->shouldExcludeQuery($event->sql)) {
+                return;
+            }
+
             $minDuration = $this->config['min_duration_ms'] ?? 10;
 
             if ($event->time >= $minDuration) {
@@ -87,6 +92,36 @@ class AutoTracer
                 ]);
             }
         });
+    }
+
+    protected function shouldExcludeQuery(string $sql): bool
+    {
+        // Get excluded tables from config
+        $excludedTables = $this->config['excluded_tables'] ?? [
+            'global_logs',              // GlobalLogger's own table
+            'telescope_entries',        // Laravel Telescope
+            'telescope_entries_tags',
+            'telescope_monitoring',
+            'jobs',                     // Queue jobs table
+            'failed_jobs',
+            'pulse_entries',            // Laravel Pulse
+            'pulse_aggregates',
+            'pulse_values',
+            'sessions',                 // Session table (noisy)
+            'cache',                    // Cache table (noisy)
+            'cache_locks',
+        ];
+
+        $sqlLower = strtolower($sql);
+
+        foreach ($excludedTables as $table) {
+            // Check for any operation on excluded tables (INSERT, UPDATE, DELETE, SELECT, TRUNCATE)
+            if (preg_match('/\b(into|from|update|join|table)\s+[`"\']?' . preg_quote($table, '/') . '[`"\']?\b/i', $sqlLower)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function registerQueueTracing(): void
