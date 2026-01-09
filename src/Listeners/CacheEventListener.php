@@ -52,11 +52,26 @@ class CacheEventListener
     }
 
     /**
+     * Check if cache key is from GlobalLogger internal operations
+     * CRITICAL: Prevents infinite loop when circuit breaker uses cache
+     */
+    protected function isGlobalLoggerInternalKey(string $key): bool
+    {
+        return Str::startsWith($key, 'globallogger:')
+            || Str::startsWith($key, 'laravel_cache:globallogger:');
+    }
+
+    /**
      * Handle cache hit event
      */
     public function handleCacheHit(CacheHit $event): void
     {
         if (!config('globallogger.features.cache.enabled', true)) {
+            return;
+        }
+
+        // CRITICAL: Prevent infinite loop from circuit breaker cache operations
+        if ($this->isGlobalLoggerInternalKey($event->key)) {
             return;
         }
 
@@ -89,6 +104,11 @@ class CacheEventListener
             return;
         }
 
+        // CRITICAL: Prevent infinite loop from circuit breaker cache operations
+        if ($this->isGlobalLoggerInternalKey($event->key)) {
+            return;
+        }
+
         // Skip logging cache operations from log-visualizer
         if ($this->isLogVisualizerContext()) {
             return;
@@ -118,6 +138,11 @@ class CacheEventListener
             return;
         }
 
+        // CRITICAL: Prevent infinite loop from circuit breaker cache operations
+        if ($this->isGlobalLoggerInternalKey($event->key)) {
+            return;
+        }
+
         // Skip logging cache operations from log-visualizer
         if ($this->isLogVisualizerContext()) {
             return;
@@ -144,6 +169,11 @@ class CacheEventListener
     public function handleKeyForgotten(KeyForgotten $event): void
     {
         if (!config('globallogger.features.cache.enabled', true)) {
+            return;
+        }
+
+        // CRITICAL: Prevent infinite loop from circuit breaker cache operations
+        if ($this->isGlobalLoggerInternalKey($event->key)) {
             return;
         }
 
