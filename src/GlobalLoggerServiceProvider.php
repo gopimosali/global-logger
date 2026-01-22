@@ -44,9 +44,10 @@ class GlobalLoggerServiceProvider extends ServiceProvider
             return $logger;
         });
 
-        // Override Laravel's Log facade to use GlobalLogger
-        $this->app->extend('log', function ($service, $app) {
-            return $app->make(GlobalLogger::class);
+        // Replace Laravel's LogManager with GlobalLogManager
+        // This allows us to add the 'globallogger' driver without extend()
+        $this->app->singleton('log', function ($app) {
+            return new GlobalLogManager($app);
         });
 
         // Register AutoTracer if enabled
@@ -62,6 +63,9 @@ class GlobalLoggerServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // The 'globallogger' driver is now registered via GlobalLogManager::createGloballoggerDriver()
+        // No need to call extend() here
+
         // Publish configuration
         if ($this->app->runningInConsole()) {
             $this->publishes([
