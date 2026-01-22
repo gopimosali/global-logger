@@ -4,17 +4,15 @@ namespace Gopimosali\GlobalLogger\Middleware;
 
 use Closure;
 use Gopimosali\GlobalLogger\GlobalLogger;
+use Gopimosali\GlobalLogger\Utils\PrivacyHelper;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class LogContextMiddleware
 {
-    protected GlobalLogger $logger;
-
-    public function __construct(GlobalLogger $logger)
-    {
-        $this->logger = $logger;
-    }
+    public function __construct(
+        protected GlobalLogger $logger
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -29,14 +27,29 @@ class LogContextMiddleware
         // Generate request_id if not set
         $requestId = $contextManager->getRequestId();
 
-        // Add request context
-        $contextManager->addContext([
+        // Prepare request context
+        $requestContext = [
             'method' => $request->method(),
             'url' => $request->fullUrl(),
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'user_id' => $request->user()?->id,
-        ]);
+        ];
+
+        // Add IP address (with privacy settings)
+        if (config('globallogger.privacy.log_ip_address', true)) {
+            $requestContext['ip'] = PrivacyHelper::anonymizeIp($request->ip());
+        }
+
+        // Add user agent (with privacy settings)
+        if (config('globallogger.privacy.log_user_agent', true)) {
+            $requestContext['user_agent'] = $request->userAgent();
+        }
+
+        // Add user ID (with privacy settings)
+        if (config('globallogger.privacy.log_user_id', true) && $request->user()) {
+            $requestContext['user_id'] = $request->user()->id;
+        }
+
+        // Add request context
+        $contextManager->addContext($requestContext);
 
         $response = $next($request);
 

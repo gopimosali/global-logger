@@ -1,6 +1,7 @@
 {
     "name": "gopimosali/global-logger",
     "description": "Universal Laravel logging with automatic request tracking, multi-provider support (AWS CloudWatch/X-Ray, Datadog, Oracle Cloud, Database, Files), and optional performance tracing",
+     "version": "1.0.0",
     "keywords": [
         "laravel",
         "logging",

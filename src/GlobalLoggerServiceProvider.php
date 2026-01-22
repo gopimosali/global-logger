@@ -2,8 +2,14 @@
 
 namespace Gopimosali\GlobalLogger;
 
+use Gopimosali\GlobalLogger\Listeners\CacheEventListener;
+use Gopimosali\GlobalLogger\Listeners\DatabaseEventListener;
+use Gopimosali\GlobalLogger\Listeners\JobEventListener;
+use Gopimosali\GlobalLogger\Listeners\MailEventListener;
+use Gopimosali\GlobalLogger\Listeners\ScheduledTaskEventListener;
 use Gopimosali\GlobalLogger\LogContext\LogContextManager;
 use Gopimosali\GlobalLogger\Middleware\LogContextMiddleware;
+use Gopimosali\GlobalLogger\Middleware\LogHttpRequest;
 use Gopimosali\GlobalLogger\Providers\AwsCloudWatchProvider;
 use Gopimosali\GlobalLogger\Providers\CustomProvider;
 use Gopimosali\GlobalLogger\Providers\DatabaseProvider;
@@ -11,6 +17,7 @@ use Gopimosali\GlobalLogger\Providers\DatadogProvider;
 use Gopimosali\GlobalLogger\Providers\OracleProvider;
 use Gopimosali\GlobalLogger\Tracing\AutoTracer;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class GlobalLoggerServiceProvider extends ServiceProvider
@@ -65,16 +72,30 @@ class GlobalLoggerServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../database/migrations/create_global_logs_table.php.stub' => database_path('migrations/'.date('Y_m_d_His', time()).'_create_global_logs_table.php'),
             ], 'globallogger-migrations');
+
+            // Register commands
+            $this->commands([
+                \Gopimosali\GlobalLogger\Console\Commands\PruneGlobalLogsCommand::class,
+                \Gopimosali\GlobalLogger\Console\Commands\GenerateExampleLogsCommand::class,
+            ]);
         }
 
         // Register middleware
         $kernel = $this->app->make(Kernel::class);
         $kernel->pushMiddleware(LogContextMiddleware::class);
 
+        // Register HTTP request logging middleware if enabled
+        if (config('globallogger.features.http.enabled', true)) {
+            $kernel->pushMiddleware(LogHttpRequest::class);
+        }
+
         // Boot AutoTracer if enabled
         if (config('globallogger.auto_tracing.enabled', true)) {
             $this->app->make(AutoTracer::class)->register();
         }
+
+        // Register Laravel feature event listeners
+        $this->registerEventListeners();
     }
 
     protected function registerProviders(GlobalLogger $logger): void
@@ -83,27 +104,55 @@ class GlobalLoggerServiceProvider extends ServiceProvider
 
         // AWS CloudWatch + X-Ray
         if ($config['aws']['enabled'] ?? false) {
-            $logger->addProvider(new AwsCloudWatchProvider($config['aws']));
+            $logger->addProvider('aws', new AwsCloudWatchProvider($config['aws']));
         }
 
         // Datadog
         if ($config['datadog']['enabled'] ?? false) {
-            $logger->addProvider(new DatadogProvider($config['datadog']));
+            $logger->addProvider('datadog', new DatadogProvider($config['datadog']));
         }
 
         // Oracle Cloud Logging
         if ($config['oracle']['enabled'] ?? false) {
-            $logger->addProvider(new OracleProvider($config['oracle']));
+            $logger->addProvider('oracle', new OracleProvider($config['oracle']));
         }
 
         // Database
         if ($config['database']['enabled'] ?? false) {
-            $logger->addProvider(new DatabaseProvider($config['database']));
+            $logger->addProvider('database', new DatabaseProvider($config['database']));
         }
 
         // Custom file logging
         if ($config['custom']['enabled'] ?? false) {
-            $logger->addProvider(new CustomProvider($config['custom']));
+            $logger->addProvider('custom', new CustomProvider($config['custom']));
+        }
+    }
+
+    protected function registerEventListeners(): void
+    {
+        // Jobs & Queues
+        if (config('globallogger.features.jobs.enabled', true)) {
+            Event::subscribe(JobEventListener::class);
+        }
+
+        // Cache Operations
+        if (config('globallogger.features.cache.enabled', true)) {
+            Event::subscribe(CacheEventListener::class);
+        }
+
+        // Database Queries
+        if (config('globallogger.features.database.enabled', true)) {
+            Event::subscribe(DatabaseEventListener::class);
+        }
+
+        // Scheduled Tasks
+        if (config('globallogger.features.scheduler.enabled', true)) {
+            Event::subscribe(ScheduledTaskEventListener::class);
+        }
+
+        // Mail
+        if (config('globallogger.features.mail.enabled', true)) {
+            Event::subscribe(MailEventListener::class);
         }
     }
 }

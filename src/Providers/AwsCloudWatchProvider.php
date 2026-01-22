@@ -12,14 +12,11 @@ class AwsCloudWatchProvider implements LogProviderInterface
 
     protected ?XRayClient $xrayClient = null;
 
-    protected array $config;
-
     protected string $sequenceToken = '';
 
-    public function __construct(array $config)
-    {
-        $this->config = $config;
-
+    public function __construct(
+        protected array $config
+    ) {
         // Initialize CloudWatch client
         $this->cloudWatchClient = new CloudWatchLogsClient([
             'region' => $config['region'],

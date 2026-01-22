@@ -10,12 +10,9 @@ class CustomProvider implements LogProviderInterface
 {
     protected Logger $logger;
 
-    protected array $config;
-
-    public function __construct(array $config)
-    {
-        $this->config = $config;
-
+    public function __construct(
+        protected array $config
+    ) {
         $this->logger = new Logger('globallogger');
         $this->logger->pushHandler(
             new RotatingFileHandler(
