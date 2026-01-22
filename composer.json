@@ -1,0 +1,60 @@
+{
+    "name": "gopimosali/global-logger",
+    "description": "Universal Laravel logging with automatic request tracking, multi-provider support (AWS CloudWatch/X-Ray, Datadog, Oracle Cloud, Database, Files), and optional performance tracing",
+    "keywords": [
+        "laravel",
+        "logging",
+        "cloudwatch",
+        "datadog",
+        "oracle",
+        "xray",
+        "tracing",
+        "monitoring",
+        "apm"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Gopi Mosali",
+            "email": "gopimosali@example.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1|^8.2|^8.3",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "illuminate/log": "^10.0|^11.0|^12.0",
+        "ramsey/uuid": "^4.7"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0|^11.0",
+        "orchestra/testbench": "^8.0|^9.0"
+    },
+    "suggest": {
+        "aws/aws-sdk-php": "Required for AWS CloudWatch and X-Ray provider (^3.0)",
+        "datadog/php-datadogstatsd": "Required for Datadog provider (^1.6)",
+        "oci8/oci8": "Required for Oracle Cloud Logging provider (^3.0)"
+    },
+    "autoload": {
+        "psr-4": {
+            "Gopimosali\\GlobalLogger\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Gopimosali\\GlobalLogger\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Gopimosali\\GlobalLogger\\GlobalLoggerServiceProvider"
+            ],
+            "aliases": {
+                "GlobalLogger": "Gopimosali\\GlobalLogger\\Facades\\GlobalLogger"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
