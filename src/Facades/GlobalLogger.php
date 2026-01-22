@@ -5,6 +5,8 @@ namespace Gopimosali\GlobalLogger\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
+ * @method static \Gopimosali\GlobalLogger\GlobalLogger channel(?string $channel = null)
+ * @method static \Gopimosali\GlobalLogger\GlobalLogger extend(string $driver, \Closure $callback)
  * @method static void emergency(string|\Stringable $message, array $context = [])
  * @method static void alert(string|\Stringable $message, array $context = [])
  * @method static void critical(string|\Stringable $message, array $context = [])
