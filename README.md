@@ -420,6 +420,68 @@ GLOBALLOG_CUSTOM_MAX_FILES=14
 - Rotating file handler (14 days by default)
 - JSON-formatted logs
 - Local development friendly
+- **Optional stdout support** for Docker/Kubernetes
+
+#### Enable Stdout Output (Docker/Kubernetes)
+
+For containerized environments, you can output logs to stdout **with full GlobalLogger context**:
+
+```env
+# Enable stdout in production (auto-enabled by default)
+GLOBALLOG_STDOUT_ENABLED=true
+```
+
+**Or configure per environment in `.env`:**
+```env
+# Auto-enable for production only
+GLOBALLOG_STDOUT_ENABLED=${APP_ENV=production}
+```
+
+**Configuration in `config/globallogger.php`:**
+```php
+'custom' => [
+    'enabled' => env('GLOBALLOG_CUSTOM_ENABLED', true),
+    'path' => env('GLOBALLOG_CUSTOM_PATH', storage_path('logs/globallogger.log')),
+    'max_files' => env('GLOBALLOG_CUSTOM_MAX_FILES', 14),
+    'stdout' => env('GLOBALLOG_STDOUT_ENABLED', env('APP_ENV') === 'production'),
+],
+```
+
+**What you get in stdout:**
+
+All logs are output as **JSON with full context**:
+
+```json
+{
+  "message": "User logged in successfully",
+  "context": {
+    "request_id": "019be854-a2a5-71b8-94dc-33e1d7891cb2",
+    "timestamp": "2026-01-23T00:50:19+00:00",
+    "environment": "production",
+    "application": "MyApp",
+    "user_id": 12345
+  },
+  "level": 200,
+  "level_name": "INFO",
+  "channel": "globallogger"
+}
+```
+
+**Benefits:**
+- ✅ Docker logs: `docker logs -f container-name` shows structured JSON
+- ✅ Kubernetes: Logs collected by K8s with full context
+- ✅ Log aggregation: Easy parsing by CloudWatch, Datadog, ELK, etc.
+- ✅ Same rich context: request_id, timestamp, environment in every log
+- ✅ File + stdout: Logs written to both file and stdout simultaneously
+
+**Test stdout logging:**
+```bash
+# Test with stdout enabled
+GLOBALLOG_STDOUT_ENABLED=true php artisan your:command
+
+# Or in production (auto-enabled)
+APP_ENV=production php artisan your:command
+```
 
 ---
 

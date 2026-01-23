@@ -4,16 +4,22 @@ namespace Gopimosali\GlobalLogger\Providers;
 
 use Gopimosali\GlobalLogger\Contracts\LogProviderInterface;
 use Monolog\Handler\RotatingFileHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Logger;
 
 class CustomProvider implements LogProviderInterface
 {
     protected Logger $logger;
+    protected bool $stdoutEnabled;
 
     public function __construct(
         protected array $config
     ) {
         $this->logger = new Logger('globallogger');
+        $this->stdoutEnabled = $config['stdout'] ?? false;
+
+        // File handler (rotating logs)
         $this->logger->pushHandler(
             new RotatingFileHandler(
                 $config['path'],
@@ -21,6 +27,13 @@ class CustomProvider implements LogProviderInterface
                 Logger::DEBUG
             )
         );
+
+        // Stdout handler (JSON formatted for production/containers)
+        if ($this->stdoutEnabled) {
+            $stdoutHandler = new StreamHandler('php://stdout', Logger::DEBUG);
+            $stdoutHandler->setFormatter(new JsonFormatter());
+            $this->logger->pushHandler($stdoutHandler);
+        }
     }
 
     public function log(string $level, string $message, array $context): void
