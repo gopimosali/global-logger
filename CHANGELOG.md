@@ -2,6 +2,20 @@
 
 All notable changes to `gopimosali/global-logger` will be documented in this file.
 
+## [1.6.3] - 2026-02-07
+
+### Fixed
+- **Oracle Cloud Logging** - Fixed date header format for signature validation
+  - Changed date format from `gmdate('D, d M Y H:i:s T')` to `gmdate('D, d M Y H:i:s \G\M\T')`
+  - Ensures consistent RFC 1123 date format with explicit "GMT" timezone
+  - Resolves HTTP 401 SIGNATURE_NOT_VALID errors in production environments
+  - Critical fix for production deployments using Oracle Cloud Logging
+
+### Technical Details
+- Oracle Cloud Infrastructure requires exact RFC 1123 date format in signature
+- Using `T` format specifier can cause inconsistent results across PHP environments
+- Explicit `\G\M\T` ensures consistent signature generation in all environments
+
 ## [1.6.2] - 2026-02-07
 
 ### Fixed

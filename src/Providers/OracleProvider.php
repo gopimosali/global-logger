@@ -40,7 +40,7 @@ class OracleProvider implements LogProviderInterface
 
             $path = "/20200831/logs/{$this->config['log_id']}/actions/push";
             $body = json_encode($payload);
-            $date = gmdate('D, d M Y H:i:s T');
+            $date = gmdate('D, d M Y H:i:s \G\M\T');
             $host = parse_url($this->config['endpoint'], PHP_URL_HOST);
             $contentSha256 = base64_encode(hash('sha256', $body, true));
             $signature = $this->generateSignature('post', $path, $body, $date, $host);
