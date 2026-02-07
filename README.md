@@ -369,21 +369,147 @@ composer require datadog/php-datadogstatsd
 
 ### Oracle Cloud Logging
 
+**Complete integration with Oracle Cloud Infrastructure (OCI) Logging service with automatic request signing.**
+
+#### Quick Setup
+
 ```env
+# Enable Oracle Cloud Logging
 GLOBALLOG_ORACLE_ENABLED=true
-ORACLE_LOGGING_ENDPOINT=https://logging.us-ashburn-1.oci.oraclecloud.com
-ORACLE_LOG_ID=ocid1.log.oc1...
-ORACLE_COMPARTMENT_ID=ocid1.compartment.oc1...
-ORACLE_TENANCY_ID=ocid1.tenancy.oc1...
-ORACLE_USER_ID=ocid1.user.oc1...
-ORACLE_KEY_FINGERPRINT=aa:bb:cc:dd...
-ORACLE_PRIVATE_KEY_PATH=/path/to/oci_api_key.pem
+
+# OCI Logging Endpoint (region-specific)
+# Format: https://ingestion.logging.{region}.oci.oraclecloud.com
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.us-ashburn-1.oci.oraclecloud.com"
+
+# Log OCID (created in OCI Console)
+ORACLE_LOG_ID="ocid1.log.oc1.iad.amaaaaaavjeslaya..."
+
+# OCI Authentication
+ORACLE_COMPARTMENT_ID="ocid1.tenancy.oc1..aaaaaaaavl4ykid4..."
+ORACLE_TENANCY_ID="ocid1.tenancy.oc1..aaaaaaaavl4ykid4..."
+ORACLE_USER_ID="ocid1.user.oc1..aaaaaaaap64xt77mwdocz..."
+ORACLE_KEY_FINGERPRINT="39:79:3c:e4:d9:13:e0:44:18:e6:0a:21:48:1c:57:85"
+ORACLE_PRIVATE_KEY_PATH="/var/www/html/.oci/oci_api_key.pem"
+```
+
+#### Detailed Setup Steps
+
+**1. Create a Log in OCI Console:**
+```
+OCI Console → Logging → Logs → Create Custom Log
+  - Name: your-application-logs
+  - Log Group: create or select existing
+  - Region: us-ashburn-1 (or your region)
+  - Copy the Log OCID
+```
+
+**2. Generate OCI API Key:**
+```bash
+# Generate private key
+mkdir ~/.oci
+openssl genrsa -out ~/.oci/oci_api_key.pem 2048
+
+# Generate public key
+openssl rsa -pubout -in ~/.oci/oci_api_key.pem -out ~/.oci/oci_api_key_public.pem
+
+# Set permissions
+chmod 600 ~/.oci/oci_api_key.pem
+```
+
+**3. Add API Key to OCI User:**
+```
+OCI Console → Identity → Users → Your User → API Keys → Add API Key
+  - Paste the public key content
+  - Copy the fingerprint
+```
+
+**4. Create IAM Policy:**
+```
+OCI Console → Identity → Policies → Create Policy
+  Name: logging-policy
+  Statement:
+    Allow group Administrators to use log-content in tenancy
+```
+
+**5. Set File Permissions (Important!):**
+```bash
+# Ensure web server can read the private key
+chown www-data:www-data /path/to/.oci/oci_api_key.pem
+chmod 640 /path/to/.oci/oci_api_key.pem
+
+# Add to .gitignore
+echo ".oci/" >> .gitignore
+```
+
+#### Regional Endpoints
+
+Choose the correct endpoint for your OCI region:
+
+```env
+# US Regions
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.us-ashburn-1.oci.oraclecloud.com"
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.us-phoenix-1.oci.oraclecloud.com"
+
+# Asia Pacific
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.ap-mumbai-1.oci.oraclecloud.com"
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.ap-hyderabad-1.oci.oraclecloud.com"
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.ap-tokyo-1.oci.oraclecloud.com"
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.ap-sydney-1.oci.oraclecloud.com"
+
+# Europe
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.eu-frankfurt-1.oci.oraclecloud.com"
+ORACLE_LOGGING_ENDPOINT="https://ingestion.logging.eu-amsterdam-1.oci.oraclecloud.com"
+
+# See full list: https://docs.oracle.com/en-us/iaas/api/#/en/logging-dataplane/20200831/
+```
+
+#### Testing Oracle Cloud Logging
+
+```bash
+# Test the integration
+php artisan tinker --execute="Log::info('Oracle Cloud Logging Test');"
+
+# Check for errors in Laravel logs
+tail -f storage/logs/laravel.log | grep -i oracle
+
+# Or check Docker stdout logs
+docker logs -f your-container | grep -i oracle
 ```
 
 **Features:**
-- Native Oracle Cloud Logging API integration
-- Automatic OCI signature generation
-- Full request context preserved
+- ✅ Native OCI Logging Ingestion API (20200831)
+- ✅ Automatic request signing with RSA-SHA256
+- ✅ Proper x-content-sha256 header generation
+- ✅ Full request context preserved (request_id, timestamp, environment)
+- ✅ JSON-formatted log entries
+- ✅ Automatic error handling with detailed error messages
+- ✅ Compatible with all OCI regions
+
+**Troubleshooting:**
+
+Common issues and solutions:
+
+```bash
+# Issue: HTTP 401 "SIGNATURE_NOT_VALID"
+# Solution: Check fingerprint and key path match
+php -r "echo openssl_pkey_get_private(file_get_contents('/path/to/key.pem')) ? 'Valid' : 'Invalid';"
+
+# Issue: HTTP 404 "NotAuthorizedOrNotFound"
+# Solution: Verify IAM policy allows log-content usage
+# Required policy: Allow group Administrators to use log-content in tenancy
+
+# Issue: Permission denied reading private key
+# Solution: Fix file ownership and permissions
+sudo chown www-data:www-data /path/to/.oci/oci_api_key.pem
+sudo chmod 640 /path/to/.oci/oci_api_key.pem
+
+# Test OCI credentials
+php artisan tinker
+>>> file_exists(env('ORACLE_PRIVATE_KEY_PATH'))
+=> true
+>>> openssl_pkey_get_private(file_get_contents(env('ORACLE_PRIVATE_KEY_PATH')))
+=> OpenSSLAsymmetricKey {...}
+```
 
 ---
 
