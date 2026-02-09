@@ -62,6 +62,23 @@ class CacheEventListener
     }
 
     /**
+     * Check if cache key should be ignored based on configured patterns.
+     * Supports exact matches and wildcard prefix matching (e.g., "illuminate:queue:paused:*").
+     */
+    protected function isIgnoredKey(string $key): bool
+    {
+        $ignoredKeys = config('globallogger.features.cache.ignored_keys', []);
+
+        foreach ($ignoredKeys as $pattern) {
+            if (Str::is($pattern, $key)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Handle cache hit event
      */
     public function handleCacheHit(CacheHit $event): void
@@ -72,6 +89,11 @@ class CacheEventListener
 
         // CRITICAL: Prevent infinite loop from circuit breaker cache operations
         if ($this->isGlobalLoggerInternalKey($event->key)) {
+            return;
+        }
+
+        // Skip ignored cache keys (framework-internal noise)
+        if ($this->isIgnoredKey($event->key)) {
             return;
         }
 
@@ -109,6 +131,11 @@ class CacheEventListener
             return;
         }
 
+        // Skip ignored cache keys (framework-internal noise)
+        if ($this->isIgnoredKey($event->key)) {
+            return;
+        }
+
         // Skip logging cache operations from log-visualizer
         if ($this->isLogVisualizerContext()) {
             return;
@@ -143,6 +170,11 @@ class CacheEventListener
             return;
         }
 
+        // Skip ignored cache keys (framework-internal noise)
+        if ($this->isIgnoredKey($event->key)) {
+            return;
+        }
+
         // Skip logging cache operations from log-visualizer
         if ($this->isLogVisualizerContext()) {
             return;
@@ -174,6 +206,11 @@ class CacheEventListener
 
         // CRITICAL: Prevent infinite loop from circuit breaker cache operations
         if ($this->isGlobalLoggerInternalKey($event->key)) {
+            return;
+        }
+
+        // Skip ignored cache keys (framework-internal noise)
+        if ($this->isIgnoredKey($event->key)) {
             return;
         }
 

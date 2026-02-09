@@ -798,6 +798,58 @@ DB::table('global_logs')
 
 ---
 
+## 🔇 Noise Filtering
+
+GlobalLogger provides configurable filtering to suppress noisy framework-internal events from polluting your logs.
+
+### Cache Key Filtering
+
+Laravel's queue workers poll cache keys like `illuminate:queue:restart` every few seconds per worker. With multiple Horizon workers, this generates thousands of cache miss log entries daily — all expected, harmless, and unactionable.
+
+Configure `ignored_keys` in `config/globallogger.php` to silence them:
+
+```php
+'features' => [
+    'cache' => [
+        'ignored_keys' => [
+            'illuminate:queue:restart',       // Queue restart polling
+            'illuminate:queue:paused:*',      // Queue pause polling
+            'livewire-checksum-failures:*',   // Livewire rate limiter checks
+        ],
+    ],
+],
+```
+
+Supports exact matches and wildcard patterns using `*` (powered by `Str::is()`).
+
+### Database Query Filtering
+
+Suppress noisy or irrelevant queries from being logged, even if they exceed the slow query threshold:
+
+```php
+'features' => [
+    'database' => [
+        // SQL patterns to ignore (supports wildcard matching with *)
+        'ignored_queries' => [
+            'select 1',                          // Health checks
+            'select * from `telescope_*',        // Telescope internals
+            'select * from `sessions` where *',  // Session reads
+        ],
+
+        // Tables to ignore - any query touching these tables is skipped
+        'ignored_tables' => [
+            'telescope_entries',
+            'telescope_entries_tags',
+            'telescope_monitoring',
+        ],
+    ],
+],
+```
+
+Both `ignored_queries` (wildcard SQL patterns) and `ignored_tables` (table name matching) are case-insensitive.
+
+---
+
 ## 🛠️ Troubleshooting
 
 ### Logs Not Appearing

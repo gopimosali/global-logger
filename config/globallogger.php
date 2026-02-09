@@ -279,6 +279,14 @@ return [
             'log_misses' => env('GLOBALLOG_CACHE_LOG_MISSES', true),
             'log_writes' => env('GLOBALLOG_CACHE_LOG_WRITES', false),
             'log_deletions' => env('GLOBALLOG_CACHE_LOG_DELETIONS', false),
+
+            // Cache keys to ignore (supports wildcard matching with *)
+            // These are framework-internal keys that produce noise
+            'ignored_keys' => [
+                'illuminate:queue:restart',
+                'illuminate:queue:paused:*',
+                'livewire-checksum-failures:*',
+            ],
         ],
 
         // Database Query Monitoring
@@ -288,6 +296,17 @@ return [
             'slow_query_threshold_ms' => env('GLOBALLOG_SLOW_QUERY_THRESHOLD', 100),
             'include_bindings' => env('GLOBALLOG_DATABASE_INCLUDE_BINDINGS', false),
             'log_connection_metrics' => env('GLOBALLOG_DATABASE_LOG_CONNECTIONS', false),
+
+            // SQL patterns to ignore (supports wildcard matching with *)
+            // These queries will never be logged, even if slow
+            'ignored_queries' => [
+                // 'select 1',  // Example: health checks
+            ],
+
+            // Tables to ignore - queries touching these tables won't be logged
+            'ignored_tables' => [
+                // 'telescope_entries',  // Example: Telescope internals
+            ],
         ],
 
         // HTTP Request/Response Monitoring

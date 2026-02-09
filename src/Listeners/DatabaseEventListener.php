@@ -5,6 +5,7 @@ namespace Gopimosali\GlobalLogger\Listeners;
 use Gopimosali\GlobalLogger\GlobalLogger;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Database Event Listener
@@ -18,11 +19,43 @@ class DatabaseEventListener
     ) {}
 
     /**
+     * Check if the query SQL matches any ignored patterns.
+     * Supports exact matches and wildcard matching (e.g., "select * from `telescope_*").
+     */
+    protected function isIgnoredQuery(string $sql): bool
+    {
+        $normalizedSql = strtolower(trim($sql));
+
+        $ignoredQueries = config('globallogger.features.database.ignored_queries', []);
+
+        foreach ($ignoredQueries as $pattern) {
+            if (Str::is(strtolower($pattern), $normalizedSql)) {
+                return true;
+            }
+        }
+
+        $ignoredTables = config('globallogger.features.database.ignored_tables', []);
+
+        foreach ($ignoredTables as $table) {
+            if (Str::contains($normalizedSql, strtolower($table))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Handle query executed event
      */
     public function handleQueryExecuted(QueryExecuted $event): void
     {
         if (!config('globallogger.features.database.enabled', true)) {
+            return;
+        }
+
+        // Skip ignored queries/tables before any other processing
+        if ($this->isIgnoredQuery($event->sql)) {
             return;
         }
 
