@@ -54,16 +54,19 @@ class MailEventListener
 
         $message = $event->message;
 
-        $this->logger->info('Email sent successfully', [
-            'log_type' => 'mail',
-            'mail_status' => 'sent',
-            'mail_subject' => $message->getSubject(),
-            'mail_to' => $this->formatAddresses($message->getTo()),
-            'mail_from' => $this->formatAddresses($message->getFrom()),
-            'mail_cc' => $this->formatAddresses($message->getCc()),
-            'mail_bcc' => $this->formatAddresses($message->getBcc()),
-            'mail_id' => $message->getId(),
-        ]);
+        try {
+            $this->logger->info('Email sent successfully', [
+                'log_type' => 'mail',
+                'mail_status' => 'sent',
+                'mail_subject' => $message->getSubject(),
+                'mail_to' => $this->formatAddresses($message->getTo()),
+                'mail_from' => $this->formatAddresses($message->getFrom()),
+                'mail_cc' => $this->formatAddresses($message->getCc()),
+                'mail_bcc' => $this->formatAddresses($message->getBcc()),
+                'mail_id' => method_exists($message, 'getId') ? $message->getId() : ($event->sent?->getMessageId() ?? null),
+            ]);
+        } catch (\Throwable) {
+        }
     }
 
     /**
